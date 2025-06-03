@@ -11,7 +11,7 @@ PHP_CONTAINER_NAME = password-cracker-php
 
 .PHONY: all up down build rebuild logs cli db-cli clean setup
 
-all: up
+all: help
 
 up: ## Запускает все сервисы в фоновом режиме
 	@echo "Запуск Docker сервисов..."
