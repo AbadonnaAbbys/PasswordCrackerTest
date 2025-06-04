@@ -3,51 +3,51 @@ version: '3.8'
 services:
   php:
     build:
-      context: ./php # Собираем образ из папки php
+      context: ./php # Build the image from the php directory
       dockerfile: Dockerfile
     container_name: password-cracker-php
     ports:
-      - "8000:8000" # Пробрасываем порт 8000 хоста на порт 8000 контейнера
+      - "8000:8000" # Forward host port 8000 to container port 8000
     volumes:
-      - ../src:/var/www/html # Монтируем папку src хоста в /var/www/html контейнера
+      - ../src:/var/www/html # Mount host src directory to /var/www/html in the container
     depends_on:
-      - db # Зависимость от сервиса db
+      - db # Depends on the db service
     environment:
-      # Переменные окружения для подключения к базе данных
+      # Environment variables for database connection
       MYSQL_HOST: db
       MYSQL_USER: user
       MYSQL_PASSWORD: password
       MYSQL_DATABASE: cracker_db
 
   db:
-    image: mysql:8.0 # Используем официальный образ MySQL 8.0
+    image: mysql:8.0 # Use the official MySQL 8.0 image
     container_name: password-cracker-db
     ports:
-      - "3306:3306" # Пробрасываем порт 3306 хоста на порт 3306 контейнера
+      - "3306:3306" # Forward host port 3306 to container port 3306
     environment:
-      # Переменные окружения для инициализации базы данных MySQL
-      MYSQL_ROOT_PASSWORD: root_password # Пароль root пользователя
-      MYSQL_DATABASE: cracker_db # Имя базы данных, которую создадим
-      MYSQL_USER: user # Имя пользователя
-      MYSQL_PASSWORD: password # Пароль пользователя
+      # Environment variables for MySQL database initialisation
+      MYSQL_ROOT_PASSWORD: root_password # Root user password
+      MYSQL_DATABASE: cracker_db # Name of the database to be created
+      MYSQL_USER: user # Username
+      MYSQL_PASSWORD: password # User password
     volumes:
-      # Создаем именованный том для сохранения данных базы данных
+      # Create a named volume to persist database data
       - db_data:/var/lib/mysql
-      # Копируем SQL файл в папку, из которой MySQL автоматически импортирует данные
+      # Copy SQL file to the directory from which MySQL automatically imports data
       - ./mysql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
   worker:
     build:
-      context: ./php # Используем тот же Dockerfile, что и для php-fpm, т.к. там уже есть PHP и все расширения
+      context: ./php # Use the same Dockerfile as for php-fpm, as it already contains PHP and all extensions
       dockerfile: Dockerfile
     container_name: password-cracker-worker
     volumes:
-      - ../src:/var/www/html # Монтируем те же исходники
+      - ../src:/var/www/html # Mount the same source files
     depends_on:
-      - db # Зависит от базы данных
-    # Команда, которая запускает наш worker.php
+      - db # Depends on the database
+    # Command that starts our worker.php
     command: php /var/www/html/worker.php
-    restart: always # Всегда перезапускать, если воркер упал
+    restart: always # Always restart if the worker crashes
 
 volumes:
-  db_data: # Объявляем именованный том
+  db_data: # Declare the named volume

@@ -1,10 +1,10 @@
 # Makefile
 #
-# Этот Makefile предназначен для управления Docker Compose проектом.
-# Все команды docker compose выполняются из папки docker/,
-# поэтому используем 'docker compose -f docker/docker-compose.yml'
+# This Makefile is designed to manage the Docker Compose project.
+# All docker compose commands are executed from the docker/ folder,
+# therefore we use 'docker compose -f docker/docker-compose.yml'
 
-# Переменные
+# Variables
 DOCKER_COMPOSE_FILE = docker/docker-compose.yml
 DB_CONTAINER_NAME = password-cracker-db
 PHP_CONTAINER_NAME = password-cracker-php
@@ -13,39 +13,39 @@ PHP_CONTAINER_NAME = password-cracker-php
 
 all: help
 
-up: ## Запускает все сервисы в фоновом режиме
-	@echo "Запуск Docker сервисов..."
+up: ## Starts all services in detached mode
+	@echo "Starting Docker services..."
 	@docker compose -f $(DOCKER_COMPOSE_FILE) up -d
 
-down: ## Останавливает и удаляет все сервисы
-	@echo "Остановка и удаление Docker сервисов..."
+down: ## Stops and removes all services
+	@echo "Stopping and removing Docker services..."
 	@docker compose -f $(DOCKER_COMPOSE_FILE) down
 
-build: ## Пересобирает все образы сервисов
-	@echo "Пересборка Docker образов..."
+build: ## Rebuilds all service images
+	@echo "Rebuilding Docker images..."
 	@docker compose -f $(DOCKER_COMPOSE_FILE) build
 
-rebuild: down clean build up ## Пересобирает, очищает и перезапускает все сервисы с нуля
-	@echo "Полная пересборка и перезапуск Docker сервисов..."
+rebuild: down clean build up ## Rebuilds, cleans, and restarts all services from scratch
+	@echo "Full rebuild and restart of Docker services..."
 
-logs: ## Просматривает логи всех сервисов
-	@echo "Просмотр логов Docker сервисов (Ctrl+C для выхода)..."
+logs: ## Views the logs of all services
+	@echo "Viewing Docker service logs (Ctrl+C to exit)..."
 	@docker compose -f $(DOCKER_COMPOSE_FILE) logs -f
 
-cli: ## Подключается к Bash оболочке PHP-контейнера
-	@echo "Подключение к оболочке PHP-контейнера..."
+cli: ## Connects to the Bash shell of the PHP container
+	@echo "Connecting to PHP container shell..."
 	@docker exec -it $(PHP_CONTAINER_NAME) bash
 
-db-cli: ## Подключается к MySQL оболочке DB-контейнера
-	@echo "Подключение к MySQL оболочке DB-контейнера..."
+db-cli: ## Connects to the MySQL shell of the DB container
+	@echo "Connecting to MySQL shell of DB container..."
 	@docker exec -it $(DB_CONTAINER_NAME) mysql -uuser -ppassword cracker_db
 
-clean: ## Удаляет все сервисы, образы и тома
-	@echo "Очистка Docker среды (удаление контейнеров, образов и томов)..."
+clean: ## Removes all services, images, and volumes
+	@echo "Cleaning Docker environment (removing containers, images, and volumes)..."
 	@docker compose -f $(DOCKER_COMPOSE_FILE) down --rmi all -v
 
-setup: clean rebuild ## Полная установка и инициализация проекта
-	@echo "Полная установка проекта: очистка, пересборка, инициализация БД и запуск."
+setup: clean rebuild ## Full project setup and initialisation
+	@echo "Full project setup: cleaning, rebuilding, DB initialisation, and starting."
 
-help: ## Отображает это справочное сообщение
+help: ## Displays this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'

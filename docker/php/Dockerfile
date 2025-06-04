@@ -1,17 +1,17 @@
-# Используем официальный образ PHP 8.3 с веб-сервером на Alpine
+# Using the official PHP 8.3 image with web server on Alpine
 FROM php:8.3-cli-alpine
 
-# Устанавливаем системные зависимости с помощью apk add
+# Install system dependencies using apk add
 RUN apk add --no-cache mysql-client
 
-# Устанавливаем необходимые расширения PHP с помощью docker-php-ext-install
+# Install required PHP extensions using docker-php-ext-install
 RUN docker-php-ext-install mysqli pdo pdo_mysql
 
-# Копируем наш php.ini в контейнер
+# Copy our php.ini into the container
 COPY php.ini /usr/local/etc/php/php.ini
 
-# Устанавливаем рабочую директорию
+# Set the working directory
 WORKDIR /var/www/html
 
-# Запускаем встроенный веб-сервер PHP на порту 8000
+# Start the built-in PHP web server on port 8000
 CMD ["php", "-S", "0.0.0.0:8000", "-t", "public/"]

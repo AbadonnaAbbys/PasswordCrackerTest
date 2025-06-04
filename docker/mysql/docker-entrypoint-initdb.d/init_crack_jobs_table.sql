@@ -7,13 +7,13 @@ CREATE TABLE IF NOT EXISTS `crack_jobs` (
                                             `attack_type` VARCHAR(50) NOT NULL,
                                             `status` VARCHAR(20) NOT NULL DEFAULT 'pending', -- 'pending', 'running', 'completed', 'failed', 'failed_permanently'
                                             `progress` DECIMAL(5,2) NOT NULL DEFAULT 0.00,
-                                            `results_json` JSON NULL, -- Для хранения JSON-объекта с результатами
+                                            `results_json` JSON NULL, -- To store the JSON object with results
                                             `start_time` DATETIME NULL,
                                             `end_time` DATETIME NULL,
                                             `error_message` TEXT NULL,
                                             `last_run_attempt` DATETIME NULL,
                                             `retry_count` INT(10) UNSIGNED NOT NULL DEFAULT 0,
-                                            `last_checked_combination` VARCHAR(10) NULL, -- НОВОЕ ПОЛЕ: Для сохранения точки останова брутфорса
+                                            `last_checked_combination` VARCHAR(10) NULL, -- NEW FIELD: To save the brute-force breakpoint
                                             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                                             PRIMARY KEY (`job_id`),

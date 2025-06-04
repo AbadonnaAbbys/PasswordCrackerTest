@@ -6,13 +6,13 @@ require_once __DIR__ . '/PasswordCracker.php';
 require_once __DIR__ . '/AttackType.php';
 require_once __DIR__ . '/JobStatus.php';
 
-// Нет необходимости в 'use JobStatus;' если JobStatus не находится в пространстве имен
+// No need for 'use JobStatus;' if JobStatus is not in a namespace
 
 if (php_sapi_name() !== 'cli') {
-    die("Этот скрипт предназначен для запуска из командной строки.");
+    die("This script is intended to be run from the command line.");
 }
 
-echo "Воркер PasswordCracker запущен.\n";
+echo "PasswordCracker worker started.\n";
 
 $pdo = getDbConnection();
 
@@ -21,7 +21,7 @@ const STUCK_JOB_TIMEOUT_MINUTES = 5;
 
 while (true) {
     try {
-        $pdo->beginTransaction(); // Начинаем транзакцию для выбора и блокировки задачи
+        $pdo->beginTransaction(); // Start a transaction to select and lock the job
 
         $stmt = $pdo->prepare(
             "SELECT * FROM crack_jobs
@@ -41,17 +41,17 @@ while (true) {
 
         if ($job) {
             $jobId = $job['job_id'];
-            $pdo->commit(); // Завершаем транзакцию выбора задачи
+            $pdo->commit(); // Conclude the job selection transaction
 
-            // Обновляем статус на 'running' в отдельной транзакции
+            // Update status to 'running' in a separate transaction
             $pdo->beginTransaction();
             $attackTypeString = $job['attack_type'];
             $currentRetryCount = (int)$job['retry_count'];
             $lastCheckedCombination = $job['last_checked_combination'];
 
-            echo "Найдено задание ID: $jobId, Тип: $attackTypeString, Попытка №: " . ($currentRetryCount + 1) . ". Начинаем обработку";
+            echo "Found job ID: $jobId, Type: $attackTypeString, Attempt No: " . ($currentRetryCount + 1) . ". Starting processing";
             if ($lastCheckedCombination) {
-                echo " (продолжаем с: $lastCheckedCombination)";
+                echo " (resuming from: $lastCheckedCombination)";
             }
             echo ".\n";
 
@@ -63,16 +63,16 @@ while (true) {
             $updateStmt->execute();
             $pdo->commit();
 
-            // Инициализация переменных для финального обновления
+            // Initialise variables for final update
             $finalStatus = JobStatus::Failed->value;
-            $progressForFinalUpdate = (float)($job['progress'] ?? 0.00); // Используется только при успехе (установится в 100)
+            $progressForFinalUpdate = (float)($job['progress'] ?? 0.00); // Only used on success (will be set to 100)
             $resultsJsonForFinalUpdate = $job['results_json'] ?? null;
-            $errorMessageForFinalUpdate = "Обработка задачи не была успешно завершена.";
+            $errorMessageForFinalUpdate = "Task processing was not successfully completed.";
 
             try {
                 $attackType = AttackType::from($attackTypeString);
                 $cracker = new PasswordCracker();
-                $cracker->setCurrentJobId($jobId); // Убедитесь, что метод ПУБЛИЧНЫЙ
+                $cracker->setCurrentJobId($jobId); // Ensure the method is PUBLIC
 
                 $results = $cracker->crack($attackType, $lastCheckedCombination);
 
@@ -81,22 +81,22 @@ while (true) {
                 $resultsJsonForFinalUpdate = json_encode($results['results'] ?? []);
                 $progressForFinalUpdate = 100.00;
 
-                echo "Задание ID: $jobId завершено успешно. Найдено: " . count($results['results'][$attackType->value] ?? []) . " паролей.\n";
+                echo "Job ID: $jobId completed successfully. Found: " . count($results['results'][$attackType->value] ?? []) . " passwords.\n";
 
-            } catch (Throwable $t) { // Ловим все ошибки и исключения
+            } catch (Throwable $t) { // Catch all errors and exceptions
                 $errorMessageForFinalUpdate = $t->getMessage();
-                $resultsJsonForFinalUpdate = null; // При ошибке результаты не сохраняем
+                $resultsJsonForFinalUpdate = null; // Do not save results on error
 
                 $finalStatus = ($currentRetryCount + 1 >= MAX_RETRY_ATTEMPTS)
                     ? JobStatus::FailedPermanently->value
                     : JobStatus::Failed->value;
 
-                // Прогресс не меняем здесь, чтобы не затереть актуальное значение, обновляемое PasswordCracker
+                // Do not change progress here to avoid overwriting the actual value updated by PasswordCracker
 
-                echo "Задание ID: $jobId завершилось с ошибкой: " . $errorMessageForFinalUpdate . ". Статус: " . $finalStatus . "\n";
+                echo "Job ID: $jobId failed with error: " . $errorMessageForFinalUpdate . ". Status: " . $finalStatus . "\n";
                 error_log("Worker error for job $jobId: " . $t->getMessage() . "\n" . $t->getTraceAsString());
             } finally {
-                $pdo->beginTransaction(); // Транзакция для финального обновления задачи
+                $pdo->beginTransaction(); // Transaction for final job update
 
                 $sqlSetParts = [
                     "status = :status",
@@ -125,8 +125,8 @@ while (true) {
                 $pdo->commit();
             }
         } else {
-            $pdo->commit(); // Завершаем транзакцию, если задач не найдено
-            echo "Нет новых заданий. Ожидание...\n";
+            $pdo->commit(); // Conclude transaction if no jobs found
+            echo "No new jobs. Waiting...\n";
             sleep(5);
         }
 
@@ -134,14 +134,14 @@ while (true) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        echo "Ошибка базы данных в воркере: " . $e->getMessage() . "\n";
+        echo "Database error in worker: " . $e->getMessage() . "\n";
         error_log("Worker PDO error: " . $e->getMessage());
         sleep(10);
     } catch (Throwable $t) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        echo "Непредвиденная ошибка воркера: " . $t->getMessage() . "\n";
+        echo "Unexpected worker error: " . $t->getMessage() . "\n";
         error_log("Worker general error: " . $t->getMessage() . "\n" . $t->getTraceAsString());
         sleep(10);
     }

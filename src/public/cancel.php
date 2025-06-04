@@ -1,66 +1,68 @@
 <?php
 // src/public/cancel.php
 
-// Подключаем необходимые конфигурационные файлы и перечисления
+// Include necessary configuration files and enums
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../JobStatus.php';
 
-// Устанавливаем заголовок Content-Type для ответа в формате JSON
+// Set Content-Type header for JSON response
 header('Content-Type: application/json');
 
-// Проверяем, что метод запроса является POST
+// Check that the request method is POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['status' => 'error', 'message' => 'Неверный метод запроса. Ожидается POST.']);
+    echo json_encode(['status' => 'error', 'message' => 'Invalid request method. POST is expected.']);
     exit;
 }
 
-// Получаем job_id из JSON-тела запроса
+// Get job_id from JSON request body
 $input = json_decode(file_get_contents('php://input'), true);
 $jobId = $input['job_id'] ?? null;
 
-// Проверяем, что job_id был передан
+// Check that job_id was provided
 if ($jobId === null) {
-    echo json_encode(['status' => 'error', 'message' => 'Параметр job_id не передан.']);
+    echo json_encode(['status' => 'error', 'message' => 'The job_id parameter was not provided.']);
     exit;
 }
 
 try {
-    // Получаем соединение с базой данных
+    // Get database connection
     $pdo = getDbConnection();
 
-    // Обновляем статус задачи на 'failed_permanently' (или 'cancelled', если такой статус есть)
-    // Это остановит воркер от дальнейшей обработки этой задачи.
-    // Условие WHERE гарантирует, что мы отменяем только задачи в определенных статусах.
+    // Update job status to 'failed_permanently' (or 'cancelled', if such a status exists)
+    // This will stop the worker from further processing this job.
+    // The WHERE clause ensures that we only cancel jobs in specific statuses.
     $stmt = $pdo->prepare(
-        "UPDATE crack_jobs SET status = :status, error_message = :error_message, updated_at = NOW() WHERE job_id = :job_id AND (status = :pending_status OR status = :running_status OR status = :failed_status)"
+        "UPDATE crack_jobs
+         SET status = :status, error_message = :error_message, end_time = NOW(), updated_at = NOW()
+         WHERE job_id = :job_id AND status IN (:pending_status, :running_status, :failed_status)"
     );
-    $stmt->bindValue(':status', JobStatus::FailedPermanently->value); // Используем FailedPermanently для отмены
-    $stmt->bindValue(':error_message', 'Задача отменена пользователем.');
+    $stmt->bindValue(':status', JobStatus::FailedPermanently->value); // Use FailedPermanently for cancellation
+    $stmt->bindValue(':error_message', 'Task cancelled by user.');
     $stmt->bindValue(':job_id', $jobId, PDO::PARAM_INT);
     $stmt->bindValue(':pending_status', JobStatus::Pending->value);
     $stmt->bindValue(':running_status', JobStatus::Running->value);
-    $stmt->bindValue(':failed_status', JobStatus::Failed->value); // Можно отменить и проваленные, чтобы не было повторных попыток
+    $stmt->bindValue(':failed_status', JobStatus::Failed->value); // Failed jobs can also be cancelled to prevent retries
     $stmt->execute();
 
-    // Проверяем, была ли задача фактически обновлена
+    // Check if the job was actually updated
     if ($stmt->rowCount() > 0) {
         echo json_encode([
             'status' => 'success',
-            'message' => "Задача ID $jobId успешно отменена."
+            'message' => "Job ID $jobId successfully cancelled."
         ]);
     } else {
         echo json_encode([
             'status' => 'error',
-            'message' => "Задача ID $jobId не найдена или не может быть отменена в текущем статусе."
+            'message' => "Job ID $jobId not found or cannot be cancelled in its current status."
         ]);
     }
 
 } catch (PDOException $e) {
-    // Логируем ошибку базы данных и возвращаем сообщение об ошибке
+    // Log database error and return an error message
     error_log("Database error cancelling job: " . $e->getMessage());
-    echo json_encode(['status' => 'error', 'message' => 'Ошибка базы данных при отмене задачи.']);
+    echo json_encode(['status' => 'error', 'message' => 'Database error when cancelling job.']);
 } catch (Exception $e) {
-    // Логируем общую ошибку и возвращаем сообщение об ошибке
-    error_log("General error cancelling job: " . $e->getMessage());
-    echo json_encode(['status' => 'error', 'message' => 'Произошла непредвиденная ошибка.']);
+    // Log unexpected errors
+    error_log("Unexpected error cancelling job: " . $e->getMessage());
+    echo json_encode(['status' => 'error', 'message' => 'An unexpected error occurred when cancelling the job.']);
 }

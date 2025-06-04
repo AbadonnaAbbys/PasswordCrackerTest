@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +9,7 @@
     <style>
         body {
             background-color: #f8f9fa;
-            font-family: 'Inter', sans-serif; /* Используем Inter как основной шрифт */
+            font-family: 'Inter', sans-serif; /* Use Inter as the main font */
         }
         .container {
             max-width: 900px;
@@ -17,274 +17,209 @@
             margin-bottom: 50px;
             background-color: #ffffff;
             padding: 30px;
-            border-radius: 15px; /* Скругленные углы */
+            border-radius: 15px; /* Rounded corners */
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
         }
         .card {
-            border-radius: 10px; /* Скругленные углы для карточек */
+            border-radius: 10px; /* Rounded corners for cards */
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
         }
         .btn-primary {
             background-color: #007bff;
             border-color: #007bff;
-            border-radius: 8px; /* Скругленные углы для кнопок */
-            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
         .btn-primary:hover {
             background-color: #0056b3;
             border-color: #0056b3;
         }
-        .form-select {
-            border-radius: 8px; /* Скругленные углы для селекта */
-        }
-        .progress-bar {
-            border-radius: 5px; /* Скругленные углы для прогресс-бара */
-        }
-        .list-group-item {
-            border-radius: 8px; /* Скругленные углы для элементов списка */
-            margin-bottom: 5px;
-        }
-        .spinner-border {
-            width: 1.5rem;
-            height: 1.5rem;
-            vertical-align: middle;
+        .progress-bar-text {
+            color: #212529; /* Darker text for better contrast */
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 <div id="app" class="container">
-    <h1 class="text-center mb-4 text-primary">Password Cracker</h1>
+    <h2 class="mb-4 text-center">Password Cracker Interface</h2>
 
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white rounded-top-3">
-            <h5 class="mb-0">Запустить новую задачу</h5>
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Start a New Password Cracking Job</h5>
         </div>
         <div class="card-body">
             <div class="mb-3">
-                <label for="attackTypeSelect" class="form-label">Выберите тип атаки:</label>
+                <label for="attackTypeSelect" class="form-label">Select Attack Type:</label>
                 <select class="form-select" id="attackTypeSelect" v-model="selectedAttackType">
-                    <option value="easy_numbers">Easy: 5 чисел (e.g., 12345)</option>
-                    <option value="medium_dict">Medium: Словарные слова (max 6 chars)</option>
-                    <option value="medium_alpha_num">Medium: 3 заглавные + 1 число (e.g., ABC1)</option>
-                    <option value="hard_mixed">Hard: 6 символов (смесь букв/цифр)</option>
+                    <option value="easy_numbers">Easy (Numbers only)</option>
+                    <option value="medium_dict">Medium (Dictionary)</option>
+                    <option value="medium_alpha_num">Medium (Uppercase Alphanumeric)</option>
+                    <option value="hard_mixed">Hard (Mixed Brute-force)</option>
                 </select>
             </div>
-            <button @click="startCrackingJob" :disabled="loading" class="btn btn-primary w-100">
-                <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                {{ loading ? 'Запуск...' : 'Начать взлом' }}
+            <button @click="startJob" class="btn btn-primary w-100" :disabled="loading">
+                <span v-if="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span v-if="loading">Starting Job...</span>
+                <span v-else>Start Job</span>
             </button>
-            <div v-if="message" :class="['alert mt-3', messageType === 'success' ? 'alert-success' : 'alert-danger']" role="alert">
+            <div v-if="message" :class="['alert mt-3', messageType === 'success' ? 'alert-success' : 'alert-danger']">
                 {{ message }}
             </div>
         </div>
     </div>
 
     <div class="card">
-        <div class="card-header bg-primary text-white rounded-top-3">
-            <h5 class="mb-0">Статус задач</h5>
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">Active and Recent Jobs</h5>
         </div>
         <div class="card-body">
             <div v-if="jobs.length === 0" class="alert alert-info text-center">
-                Нет активных или завершенных задач. Запустите новую задачу выше.
+                No cracking jobs found. Start a new one!
             </div>
-            <ul class="list-group">
-                <li v-for="job in sortedJobs" :key="job.job_id" class="list-group-item d-flex flex-column mb-3">
-                    <div class="d-flex justify-content-between align-items-center">
+            <div v-else>
+                <ul class="list-group">
+                    <li v-for="job in jobs" :key="job.job_id" class="list-group-item d-flex justify-content-between align-items-center">
                         <div>
-                            <strong>ID Задачи:</strong> {{ job.job_id }} <br>
-                            <strong>Тип атаки:</strong> {{ formatAttackType(job.attack_type) }} <br>
-                            <strong>Статус:</strong>
-                            <span :class="['badge', getStatusBadgeClass(job.status)]">{{ formatJobStatus(job.status) }}</span>
-                            <span v-if="job.status === 'running'" class="spinner-border spinner-border-sm ms-2 text-primary" role="status" aria-hidden="true"></span>
+                            <strong>Job ID:</strong> {{ job.job_id }}<br>
+                            <strong>Attack Type:</strong> <span class="badge bg-secondary">{{ formatAttackType(job.attack_type) }}</span><br>
+                            <strong>Status:</strong> <span :class="['badge', getStatusBadgeClass(job.status)]">{{ formatJobStatus(job.status) }}</span><br>
+                            <template v-if="job.status === 'running' && job.last_checked_combination">
+                                <strong>Last Checked:</strong> {{ job.last_checked_combination }}<br>
+                            </template>
+                            <template v-if="job.status === 'running' || job.status === 'completed'">
+                                <div class="progress mt-2" style="height: 25px;">
+                                    <div class="progress-bar"
+                                         :class="getStatusBadgeClass(job.status)"
+                                         role="progressbar"
+                                         :style="{ width: job.progress + '%' }"
+                                         :aria-valuenow="job.progress"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100">
+                                        <span class="progress-bar-text">{{ job.progress }}%</span>
+                                    </div>
+                                </div>
+                            </template>
+                            <template v-if="job.status === 'completed' && job.results_json">
+                                <strong>Results:</strong>
+                                <ul>
+                                    <li v-for="(crackedPass, userId) in JSON.parse(job.results_json)[job.attack_type]" :key="userId">
+                                        User {{ userId }}: {{ crackedPass }}
+                                    </li>
+                                </ul>
+                            </template>
+                            <template v-if="job.status === 'failed' || job.status === 'failed_permanently'">
+                                <strong>Error:</strong> <span class="text-danger">{{ job.error_message || 'No specific error message.' }}</span><br>
+                                <strong>Retry Attempts:</strong> {{ job.retry_count }}
+                            </template>
+                            <small class="text-muted">Created: {{ new Date(job.created_at).toLocaleString('en-GB') }}</small><br>
+                            <small class="text-muted">Updated: {{ new Date(job.updated_at).toLocaleString('en-GB') }}</small>
                         </div>
                         <button v-if="job.status === 'pending' || job.status === 'running' || job.status === 'failed'"
                                 @click="cancelJob(job.job_id)"
-                                class="btn btn-sm btn-outline-danger"
-                                title="Отменить задачу">
-                            Отменить
+                                class="btn btn-sm btn-danger">
+                            Cancel
                         </button>
-                    </div>
-                    <div v-if="job.status === 'running' && job.progress !== null && job.progress !== undefined" class="mt-2">
-                        <div class="progress" style="height: 20px;">
-                            <div class="progress-bar bg-info" role="progressbar" :style="{ width: job.progress + '%' }" :aria-valuenow="job.progress" aria-valuemin="0" aria-valuemax="100">
-                                {{ parseFloat(job.progress).toFixed(2) }}%
-                            </div>
-                        </div>
-                        <small class="text-muted mt-1 d-block">Последняя проверенная комбинация: {{ job.last_checked_combination || 'N/A' }}</small>
-                    </div>
-                    <div v-if="job.status === 'completed' && job.results_json" class="mt-2">
-                        <h6>Найденные пароли:</h6>
-                        <ul class="list-group list-group-flush">
-                            <li v-for="(password, userId) in JSON.parse(job.results_json)[job.attack_type]" :key="userId" class="list-group-item list-group-item-success d-flex justify-content-between align-items-center">
-                                <span>User ID: <strong>{{ userId }}</strong></span>
-                                <span>Пароль: <strong>{{ password }}</strong></span>
-                            </li>
-                        </ul>
-                    </div>
-                    <div v-if="job.status === 'failed' || job.status === 'failed_permanently'" class="mt-2 text-danger">
-                        <strong>Ошибка:</strong> {{ job.error_message || 'Неизвестная ошибка.' }}
-                        <small v-if="job.retry_count > 0" class="d-block">Попыток: {{ job.retry_count }}</small>
-                    </div>
-                    <small class="text-muted mt-2">
-                        Создано: {{ new Date(job.created_at + ' UTC').toLocaleString() }} |
-                        Обновлено: {{ new Date(job.updated_at + ' UTC').toLocaleString() }}
-                    </small>
-                </li>
-            </ul>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.7/dist/umd/popper.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const app = Vue.createApp({
         data() {
             return {
-                selectedAttackType: 'easy_numbers', // Значение по умолчанию
-                loading: false,
+                selectedAttackType: 'easy_numbers',
                 message: '',
                 messageType: '',
-                jobs: [] // Список задач, загруженных с сервера
+                loading: false,
+                jobs: []
             };
         },
-        computed: {
-            // Сортировка задач: сначала 'running', 'pending', 'failed', затем 'completed'
-            sortedJobs() {
-                const statusOrder = {
-                    'running': 1,
-                    'pending': 2,
-                    'failed': 3,
-                    'failed_permanently': 4,
-                    'completed': 5
-                };
-                return [...this.jobs].sort((a, b) => {
-                    const orderA = statusOrder[a.status] || 99;
-                    const orderB = statusOrder[b.status] || 99;
-                    if (orderA !== orderB) {
-                        return orderA - orderB;
-                    }
-                    // Если статусы одинаковые, сортируем по дате создания (новые сверху)
-                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-                });
-            }
-        },
         methods: {
-            // Метод для запуска новой задачи по взлому
-            async startCrackingJob() {
+            async startJob() {
                 this.loading = true;
                 this.message = '';
-                this.messageType = '';
-
                 try {
-                    // Используем window.location.origin для формирования абсолютного URL
-                    const response = await fetch(`${window.location.origin}/index.php`, {
+                    const response = await fetch('/index.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({ attackType: this.selectedAttackType })
                     });
-
                     const data = await response.json();
-
+                    this.message = data.message;
+                    this.messageType = data.status;
                     if (data.status === 'success') {
-                        this.message = data.message;
-                        this.messageType = 'success';
-                        this.fetchJobs(); // Обновить список задач после успешного запуска
-                    } else {
-                        this.message = data.message || 'Неизвестная ошибка при запуске задачи.';
-                        this.messageType = 'danger';
+                        this.fetchJobs(); // Refresh job list after successful submission
                     }
                 } catch (error) {
-                    console.error('Ошибка при запуске задачи:', error);
-                    this.message = 'Произошла ошибка сети или сервера.';
-                    this.messageType = 'danger';
+                    console.error('Error starting job:', error);
+                    this.message = 'An error occurred while starting the job.';
+                    this.messageType = 'error';
                 } finally {
                     this.loading = false;
                 }
             },
-
-            // Метод для отмены задачи
+            async fetchJobs() {
+                try {
+                    const response = await fetch('/jobs.php');
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        this.jobs = data.jobs;
+                    } else {
+                        console.error('Error fetching jobs:', data.message);
+                    }
+                } catch (error) {
+                    console.error('Error fetching jobs:', error);
+                }
+            },
             async cancelJob(jobId) {
-                // Заменяем confirm на alert, так как confirm() не рекомендуется в iframe
-                if (!confirm(`Вы уверены, что хотите отменить задачу ID ${jobId}?`)) {
+                if (!confirm(`Are you sure you want to cancel job ID ${jobId}?`)) {
                     return;
                 }
-
                 try {
-                    // Используем window.location.origin для формирования абсолютного URL
-                    const response = await fetch(`${window.location.origin}/cancel.php`, { // Предполагаем, что у вас будет endpoint cancel.php
+                    const response = await fetch('/cancel.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({ job_id: jobId })
                     });
-
                     const data = await response.json();
-
+                    alert(data.message);
                     if (data.status === 'success') {
-                        // Заменяем alert на console.log или кастомное сообщение в UI
-                        console.log(data.message);
-                        this.message = data.message;
-                        this.messageType = 'success';
-                        this.fetchJobs(); // Обновить список задач
-                    } else {
-                        // Заменяем alert на console.log или кастомное сообщение в UI
-                        console.error(data.message || 'Не удалось отменить задачу.');
-                        this.message = data.message || 'Не удалось отменить задачу.';
-                        this.messageType = 'danger';
+                        this.fetchJobs(); // Refresh job list after cancellation
                     }
                 } catch (error) {
-                    console.error('Ошибка при отмене задачи:', error);
-                    this.message = 'Произошла ошибка при отмене задачи.';
-                    this.messageType = 'danger';
+                    console.error('Error cancelling job:', error);
+                    alert('An error occurred while attempting to cancel the job.');
                 }
             },
-
-            // Метод для получения списка всех задач
-            async fetchJobs() {
-                try {
-                    // Используем window.location.origin для формирования абсолютного URL
-                    const response = await fetch(`${window.location.origin}/jobs.php`); // Предполагаем, что у вас будет endpoint jobs.php
-                    const data = await response.json();
-
-                    if (data.status === 'success') {
-                        this.jobs = data.jobs;
-                    } else {
-                        console.error('Ошибка при получении списка задач:', data.message);
-                        this.jobs = [];
-                    }
-                } catch (error) {
-                    console.error('Ошибка сети при получении списка задач:', error);
-                    this.jobs = [];
-                }
-            },
-
-            // Вспомогательная функция для форматирования типа атаки
+            // Helper function to format attack type for display
             formatAttackType(type) {
                 switch (type) {
-                    case 'easy_numbers': return 'Легкие числа (5 цифр)';
-                    case 'medium_dict': return 'Средний (словарь)';
-                    case 'medium_alpha_num': return 'Средний (3 загл. + 1 цифра)';
-                    case 'hard_mixed': return 'Сложный (смешанный)';
+                    case 'easy_numbers': return 'Easy (Numbers)';
+                    case 'medium_dict': return 'Medium (Dictionary)';
+                    case 'medium_alpha_num': return 'Medium (Alphanumeric)';
+                    case 'hard_mixed': return 'Hard (Mixed)';
                     default: return type;
                 }
             },
-            // Вспомогательная функция для форматирования статуса задачи
+            // Helper function to format job status
             formatJobStatus(status) {
                 switch (status) {
-                    case 'pending': return 'В ожидании';
-                    case 'running': return 'Выполняется';
-                    case 'completed': return 'Завершено';
-                    case 'failed': return 'Сбой (повтор)';
-                    case 'failed_permanently': return 'Сбой (окончательно)';
+                    case 'pending': return 'Pending';
+                    case 'running': return 'Running';
+                    case 'completed': return 'Completed';
+                    case 'failed': return 'Failed (Retry)';
+                    case 'failed_permanently': return 'Failed (Permanent)';
                     default: return status;
                 }
             },
-            // Вспомогательная функция для получения класса Bootstrap для статуса
+            // Helper function to get Bootstrap class for status badge
             getStatusBadgeClass(status) {
                 switch (status) {
                     case 'pending': return 'bg-warning';
@@ -297,8 +232,8 @@
             }
         },
         mounted() {
-            this.fetchJobs(); // Загружаем задачи при монтировании компонента
-            // Обновляем задачи каждые 5 секунд
+            this.fetchJobs(); // Load jobs when the component is mounted
+            // Refresh jobs every 5 seconds
             setInterval(this.fetchJobs, 5000);
         }
     });

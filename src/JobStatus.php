@@ -7,5 +7,5 @@ enum JobStatus: string
     case Running = 'running';
     case Completed = 'completed';
     case Failed = 'failed';
-    case FailedPermanently = 'failed_permanently'; // Для заданий, достигших MAX_RETRY_ATTEMPTS
+    case FailedPermanently = 'failed_permanently'; // For jobs that have reached MAX_RETRY_ATTEMPTS
 }

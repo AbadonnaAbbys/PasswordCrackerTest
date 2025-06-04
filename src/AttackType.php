@@ -7,7 +7,7 @@ enum AttackType: string
     case HardMixed = 'hard_mixed';
 
     /**
-     * Возвращает ожидаемое количество паролей для данного типа атаки.
+     * Returns the expected number of passwords for this attack type.
      * @return int
      */
     public function expectedCount(): int

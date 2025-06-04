@@ -15,7 +15,7 @@ class PasswordCracker
     {
         $this->pdo = getDbConnection();
         $this->loadHashedPasswordsFromDb();
-        $this->totalHardMixedCombinations = pow(62, 6); // (a-z, A-Z, 0-9) -> 26+26+10 = 62 символа
+        $this->totalHardMixedCombinations = pow(62, 6); // (a-z, A-Z, 0-9) -> 26+26+10 = 62 characters
     }
 
     private function loadHashedPasswordsFromDb(): void
@@ -25,7 +25,7 @@ class PasswordCracker
     }
 
     /**
-     * Устанавливает ID текущего задания.
+     * Sets the ID of the current job.
      * @param int $jobId
      */
     public function setCurrentJobId(int $jobId): void
@@ -36,7 +36,7 @@ class PasswordCracker
     public function crack(AttackType $attackType, string $lastCheckedCombination = null): array
     {
         $crackedPasswords = [];
-        $message = "Неизвестный тип атаки или ошибка при взломе.";
+        $message = "Unknown attack type or error during cracking.";
         $status = 'error';
         $expectedCount = $attackType->expectedCount();
         $tempHashedPasswords = $this->hashedPasswordsFromDb;
@@ -44,23 +44,23 @@ class PasswordCracker
         switch ($attackType) {
             case AttackType::EasyNumbers:
                 $crackedPasswords = $this->crackEasyNumbers($tempHashedPasswords, $expectedCount);
-                $message = "Найдено " . count($crackedPasswords) . " из " . $expectedCount . " легких паролей (чисел).";
+                $message = "Found " . count($crackedPasswords) . " out of " . $expectedCount . " easy (number) passwords.";
                 break;
             case AttackType::MediumDictionary:
                 $crackedPasswords = $this->crackMediumDictionary($tempHashedPasswords, $expectedCount);
-                $message = "Найдено " . count($crackedPasswords) . " из " . $expectedCount . " средних словарных паролей.";
+                $message = "Found " . count($crackedPasswords) . " out of " . $expectedCount . " medium dictionary passwords.";
                 break;
             case AttackType::MediumAlphaNum:
                 $crackedPasswords = $this->crackMediumAlphaNum($tempHashedPasswords, $expectedCount);
-                $message = "Найдено " . count($crackedPasswords) . " из " . $expectedCount . " средних буквенно-цифровых паролей.";
+                $message = "Found " . count($crackedPasswords) . " out of " . $expectedCount . " medium alphanumeric passwords.";
                 break;
             case AttackType::HardMixed:
                 $crackedPasswords = $this->crackHardMixed($tempHashedPasswords, $expectedCount, $lastCheckedCombination);
-                $message = "Найдено " . count($crackedPasswords) . " из " . $expectedCount . " сложных смешанных паролей.";
+                $message = "Found " . count($crackedPasswords) . " out of " . $expectedCount . " hard mixed passwords.";
                 break;
         }
 
-        // Статус 'success' если что-то найдено, или если это тип атаки, где пустой результат не является ошибкой выполнения.
+        // Status 'success' if something is found, or if it's an attack type where an empty result is not a failure.
         if (!empty($crackedPasswords) ||
             $attackType === AttackType::EasyNumbers ||
             $attackType === AttackType::MediumAlphaNum ||
@@ -104,7 +104,7 @@ class PasswordCracker
 
         $dictionaryFilePath = __DIR__ . '/dictionary.txt';
         if (!file_exists($dictionaryFilePath)) {
-            error_log("Файл словаря не найден: " . $dictionaryFilePath);
+            error_log("Dictionary file not found: " . $dictionaryFilePath);
             return [];
         }
 
@@ -169,7 +169,7 @@ class PasswordCracker
         $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         $len = strlen($chars);
         $charMap = array_flip(str_split($chars));
-        $c = array_fill(0, 6, 0); // Индексы для 'aaaaaa'
+        $c = array_fill(0, 6, 0); // Indices for 'aaaaaa'
 
         if ($startFromCombination !== null && strlen($startFromCombination) === 6) {
             $temp_c = array_fill(0, 6, 0);
@@ -178,7 +178,7 @@ class PasswordCracker
                 if (isset($charMap[$startFromCombination[$i]])) {
                     $temp_c[$i] = $charMap[$startFromCombination[$i]];
                 } else {
-                    error_log("Неверный символ в startFromCombination для generateMixedPasswords: " . $startFromCombination . ". Начало с 'aaaaaa'.");
+                    error_log("Invalid character in startFromCombination for generateMixedPasswords: " . $startFromCombination . ". Starting with 'aaaaaa'.");
                     $validStart = false;
                     break;
                 }
@@ -198,7 +198,7 @@ class PasswordCracker
                 $c[$j] = 0;
                 $j--;
             }
-            if ($j < 0) break; // Все комбинации исчерпаны
+            if ($j < 0) break; // All combinations exhausted
         } while (true);
     }
 
@@ -209,7 +209,7 @@ class PasswordCracker
         if (empty($hashedPasswordsToSearch) || $expectedCount === 0) return [];
 
         $flippedDbHashes = array_flip($hashedPasswordsToSearch);
-        $processedCombinations = 0; // Счетчик проверенных комбинаций в текущем вызове
+        $processedCombinations = 0; // Counter for combinations checked in the current call
         $lastProgressUpdateTime = 0;
 
         $passwordGenerator = $this->generateMixedPasswords($startFromCombination);
@@ -218,14 +218,14 @@ class PasswordCracker
             if ($foundCount >= $expectedCount && $expectedCount > 0) break;
             $processedCombinations++;
 
-            // Периодическое сохранение прогресса (каждые 100,000 комбинаций или каждые 10 секунд)
+            // Periodically save progress (every 100,000 combinations or every 10 seconds)
             if ($this->currentJobId > 0 && ($processedCombinations % 100000 === 0 || (time() - $lastProgressUpdateTime > 10))) {
                 $currentProgressEstimate = 0;
                 if ($this->totalHardMixedCombinations > 0) {
-                    // Примечание: этот расчет прогресса является приблизительным, если атака возобновлена.
-                    // Он не учитывает точно, сколько комбинаций было до $startFromCombination.
-                    // Однако, он показывает прогресс *внутри текущей сессии обработки*.
-                    // last_checked_combination - более важный показатель для возобновления.
+                    // Note: This progress calculation is approximate if the attack is resumed.
+                    // It does not precisely account for how many combinations were before $startFromCombination.
+                    // However, it shows progress *within the current processing session*.
+                    // last_checked_combination is a more important indicator for resumption.
                     $currentProgressEstimate = ($processedCombinations / $this->totalHardMixedCombinations) * 100;
                 }
                 $currentProgressEstimate = min(100.00, max(0.00, $currentProgressEstimate));
@@ -257,7 +257,7 @@ class PasswordCracker
             $stmt->bindValue(':job_id', $jobId, PDO::PARAM_INT);
             $stmt->execute();
         } catch (PDOException $e) {
-            error_log("Не удалось обновить прогресс для задания ID $jobId: " . $e->getMessage());
+            error_log("Failed to update progress for job ID $jobId: " . $e->getMessage());
         }
     }
 }
